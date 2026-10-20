@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service with Persistent Storage
+  db:
+    image: postgres:16-alpine
+    container_name: sentinel_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: apisentinel
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d apisentinel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sentinel_net
+
+  # API Sentinel Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_DIALECT: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: apisentinel
+      DB_USER: sentinel
+      DB_PASSWORD: sentinel_secret
+      JWT_SECRET: sentinel_production_docker_jwt_key_9876543210
+      JWT_EXPIRES_IN: 7d
+      AUTO_PING_ENABLED: "true"
+      PING_INTERVAL_MS: 30000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sentinel_net
+
+volumes:
+  postgres_data:
+    name: sentinel_postgres_data
+    driver: local
+
+networks:
+  sentinel_net:
+    name: sentinel_network
+    driver: bridge
