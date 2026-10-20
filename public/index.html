@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Sentinel — Real-time API Health Monitoring & Incident Platform</title>
+  <meta name="description" content="Production-ready API health monitoring, automated incident response, telemetry sparklines, and uptime analytics.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       TOP HEADER & NAVBAR
+       ======================================================================== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-wrapper" onclick="App.switchTab('endpoints')">
+        <div class="brand-logo-container">
+          <div class="pulse-radar-dot" id="radar-pulse"></div>
+          <svg viewBox="0 0 64 64" fill="none">
+            <path d="M32 10L48 18V31C48 42.5 41.2 51.2 32 55C22.8 51.2 16 42.5 16 31V18L32 10Z" fill="url(#shieldG)" fill-opacity="0.2" stroke="#06B6D4" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M22 33H27L30 25L34 39L37 31H42" stroke="#10B981" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="shieldG" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#06B6D4"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-title-group">
+          <div class="brand-title">
+            API SENTINEL
+            <span class="brand-badge">SRE v1.0</span>
+          </div>
+          <span class="brand-subtitle">Health Monitoring & Incident Command Platform</span>
+        </div>
+      </div>
+
+      <!-- Quick Role Switcher & Header Actions -->
+      <div class="header-actions">
+        <!-- 1-Click Role Switcher for Evaluation -->
+        <div style="display:flex; align-items:center; gap:4px; background:var(--bg-surface); padding:3px 6px; border-radius:var(--radius-full); border:1px solid var(--border-subtle);">
+          <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600; padding:0 6px; text-transform:uppercase;">Role:</span>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem;" data-switch-role="admin" title="Switch session to Admin">Admin</button>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem;" data-switch-role="analyst" title="Switch session to Analyst">Analyst</button>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem;" data-switch-role="viewer" title="Switch session to Viewer">Viewer</button>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" id="btn-ping-all" title="Ping all active endpoints immediately">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Ping All
+        </button>
+
+        <button class="btn btn-primary btn-sm analyst-admin-only" onclick="Monitors.openCreateModal()" id="btn-add-monitor">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          + Add Monitor
+        </button>
+
+        <!-- Current User Profile Badge -->
+        <div class="user-profile-badge" id="user-profile-badge" onclick="document.getElementById('auth-modal').classList.add('active')">
+          <div class="user-avatar-circle" id="user-avatar-circle">A</div>
+          <div class="user-info-text">
+            <span class="user-name-text" id="user-name-text">Alex Vance</span>
+            <span class="user-role-pill" id="user-role-pill">ADMIN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN APP CONTAINER
+       ======================================================================== -->
+  <main class="app-container">
+
+    <!-- HERO KPI METRICS STRIP -->
+    <section class="metrics-grid" aria-label="System Metrics">
+      <!-- 1. System Health / Uptime -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">System Availability</span>
+          <div class="metric-icon-box" style="color:var(--status-healthy);">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-value" id="kpi-uptime-pct" style="color:var(--status-healthy);">99.2%</span>
+        </div>
+        <div class="metric-subtext">
+          <span>Target SLA: 99.9% 24h rolling</span>
+        </div>
+      </div>
+
+      <!-- 2. Services Breakdown -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">Monitored Services</span>
+          <div class="metric-icon-box" style="color:var(--accent-cyan);">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-value" id="kpi-total-monitors">5</span>
+        </div>
+        <div class="metric-subtext" style="gap:8px;">
+          <span style="color:var(--status-healthy);"><b id="kpi-healthy-count">4</b> healthy</span> •
+          <span style="color:var(--status-degraded);"><b id="kpi-degraded-count">1</b> degraded</span> •
+          <span style="color:var(--status-down);"><b id="kpi-down-count">0</b> down</span>
+        </div>
+      </div>
+
+      <!-- 3. Latency -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">Global Avg Latency</span>
+          <div class="metric-icon-box" style="color:var(--accent-blue);">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-value" id="kpi-avg-latency">48ms</span>
+        </div>
+        <div class="metric-sparkline" id="kpi-latency-sparkline"></div>
+      </div>
+
+      <!-- 4. Active Outages / Incidents -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">Active Incidents</span>
+          <div class="metric-icon-box" style="color:var(--status-down);">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-value" id="kpi-active-incidents" style="color:var(--status-down);">0</span>
+        </div>
+        <div class="metric-subtext">
+          <span>Total checks performed: <strong id="kpi-total-checks" style="color:var(--text-primary);">--</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="navigation-bar" aria-label="Sections">
+      <ul class="nav-tabs" role="tablist">
+        <li>
+          <button class="nav-tab-btn active" data-tab="endpoints" role="tab" id="tab-endpoints">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Endpoints & Monitors
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="incidents" role="tab" id="tab-incidents">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            Incident Command Center
+            <span class="tab-counter" id="tab-incidents-counter">0</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="telemetry" role="tab" id="tab-telemetry">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+            </svg>
+            Live Telemetry Stream
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="alerts" role="tab" id="tab-alerts">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            Alert Policies
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="diagnostics" role="tab" id="tab-diagnostics">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+            Simulator & Diagnostics
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- ========================================================================
+         TAB 1: ENDPOINTS & MONITORS
+         ======================================================================== -->
+    <div class="tab-view active" id="view-endpoints">
+      <div class="toolbar-container">
+        <div class="search-input-wrapper">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="text" id="monitor-search-input" class="form-control" placeholder="Search monitors by name or URL...">
+        </div>
+
+        <div class="filter-group">
+          <select id="monitor-status-filter" class="select-control">
+            <option value="">All Health Statuses</option>
+            <option value="healthy">Healthy Only</option>
+            <option value="degraded">Degraded Only</option>
+            <option value="down">Down / Outage Only</option>
+          </select>
+
+          <select id="monitor-env-filter" class="select-control">
+            <option value="">All Environments</option>
+            <option value="production">Production</option>
+            <option value="staging">Staging</option>
+            <option value="internal">Internal</option>
+          </select>
+
+          <button class="btn btn-secondary btn-sm" onclick="Monitors.loadMonitors()" title="Refresh List">
+            ↻ Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Monitor Cards Grid -->
+      <div class="monitors-grid" id="monitors-grid">
+        <!-- Rendered by js/monitors.js -->
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         TAB 2: INCIDENT COMMAND CENTER
+         ======================================================================== -->
+    <div class="tab-view" id="view-incidents">
+      <div class="toolbar-container">
+        <div class="search-input-wrapper">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="text" id="incident-search-input" class="form-control" placeholder="Search by incident code, title, or cause...">
+        </div>
+
+        <div class="filter-group">
+          <select id="incident-status-filter" class="select-control">
+            <option value="">All Statuses</option>
+            <option value="investigating">Investigating</option>
+            <option value="identified">Identified / Acknowledged</option>
+            <option value="monitoring">Monitoring Recovery</option>
+            <option value="resolved">Resolved</option>
+          </select>
+
+          <select id="incident-severity-filter" class="select-control">
+            <option value="">All Severities</option>
+            <option value="critical">Critical (P1)</option>
+            <option value="high">High (P2)</option>
+            <option value="medium">Medium (P3)</option>
+            <option value="low">Low (P4)</option>
+          </select>
+
+          <button class="btn btn-primary btn-sm" onclick="Incidents.openReportModal()">
+            + Report Incident
+          </button>
+        </div>
+      </div>
+
+      <!-- Incidents List -->
+      <div class="incidents-container" id="incidents-container">
+        <!-- Rendered by js/incidents.js -->
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         TAB 3: LIVE TELEMETRY STREAM
+         ======================================================================== -->
+    <div class="tab-view" id="view-telemetry">
+      <div class="toolbar-container">
+        <div>
+          <h3 style="font-size:1.1rem; font-weight:700;">Live Health Check Telemetry Log</h3>
+          <p style="font-size:0.8rem; color:var(--text-muted);">Real-time stream of synthetic HTTP health check probes and responses.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="App.loadTelemetryLogs()">
+          ↻ Refresh Stream
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Monitored Service</th>
+              <th>Method</th>
+              <th>HTTP Code</th>
+              <th>Response Time</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="telemetry-table-body">
+            <!-- Rendered by js/app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         TAB 4: ALERT POLICIES
+         ======================================================================== -->
+    <div class="tab-view" id="view-alerts">
+      <div class="toolbar-container">
+        <div>
+          <h3 style="font-size:1.1rem; font-weight:700;">Alert Policies & Routing</h3>
+          <p style="font-size:0.8rem; color:var(--text-muted);">Define thresholds for auto-triggering incidents, Slack alerts, or email dispatch.</p>
+        </div>
+        <button class="btn btn-primary btn-sm admin-only" onclick="App.openAlertModal()">
+          + New Alert Policy
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Policy Name</th>
+              <th>Scope</th>
+              <th>Trigger Condition</th>
+              <th>Channel</th>
+              <th>Enabled</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-table-body">
+            <!-- Rendered by js/app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         TAB 5: SIMULATOR & DIAGNOSTICS
+         ======================================================================== -->
+    <div class="tab-view" id="view-diagnostics">
+
+      <!-- OUTAGE SIMULATOR CARD -->
+      <div class="simulator-card normal" id="simulator-card">
+        <div class="simulator-header">
+          <div class="simulator-title-group">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <h3 style="font-size:1.2rem; font-weight:700;">Live Outage Simulator</h3>
+              <span class="status-pill status-healthy" id="simulator-state-badge">HEALTHY (200 OK)</span>
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px;">
+              For examiner demonstration: Toggle to simulate an instant backend failure on <code>Order Processing Pipeline</code>.
+              Watch the monitor turn <strong>RED (503)</strong>, consecutive failures increment, and Sentinel automatically generate an <strong>Incident</strong>!
+            </p>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Simulate Outage:</span>
+            <label class="switch">
+              <input type="checkbox" id="outage-simulator-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- POSTMAN & EVALUATION GUIDE CARD -->
+      <div class="simulator-card normal" style="margin-top:20px;">
+        <div class="simulator-header">
+          <div>
+            <h3 style="font-size:1.15rem; font-weight:700;">API Testing & Evaluation Deliverables</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px;">
+              All requirements (CRUD, Auth & RBAC, Git, Docker, Postman collection) are ready for evaluation.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <a href="/API_Sentinel.postman_collection.json" download class="btn btn-secondary btn-sm">
+              📥 Download Postman Collection
+            </a>
+            <a href="/API_Sentinel.postman_environment.json" download class="btn btn-secondary btn-sm">
+              📥 Download Postman Env
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYSTEM DIAGNOSTICS JSON INSPECTOR -->
+      <div class="diagnostics-grid">
+        <div class="diag-item" style="grid-column: 1 / -1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4>Engine Diagnostics Probe (GET /api/health-checks/system)</h4>
+            <button class="btn btn-secondary btn-sm" onclick="App.loadDiagnostics()">Re-fetch</button>
+          </div>
+          <pre id="diagnostics-system-json">Loading system telemetry...</pre>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================
+       MODALS
+       ======================================================================== -->
+
+  <!-- 1. MONITOR CREATE / EDIT MODAL -->
+  <div class="modal-overlay" id="monitor-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="monitor-modal-title">Register Monitored Service</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="monitor-form">
+        <div class="modal-body">
+          <input type="hidden" id="monitor-id">
+
+          <div class="form-group">
+            <label class="form-label" for="monitor-name">Service / API Name *</label>
+            <input type="text" id="monitor-name" class="form-control" required placeholder="e.g. Stripe Checkout Gateway">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="monitor-url">Health Endpoint URL *</label>
+            <input type="url" id="monitor-url" class="form-control" required placeholder="http://localhost:3000/api/mock/healthy">
+            <span class="form-help">Must start with http:// or https://. Works with internal mock endpoints or external APIs.</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="monitor-method">HTTP Method</label>
+              <select id="monitor-method" class="form-control">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="HEAD">HEAD</option>
+                <option value="PUT">PUT</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="monitor-expected">Expected HTTP Status</label>
+              <input type="number" id="monitor-expected" class="form-control" value="200" min="100" max="599">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="monitor-interval">Check Interval (seconds)</label>
+              <input type="number" id="monitor-interval" class="form-control" value="30" min="5" max="3600">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="monitor-timeout">Request Timeout (ms)</label>
+              <input type="number" id="monitor-timeout" class="form-control" value="5000" min="500" max="30000">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="monitor-env">Environment</label>
+            <select id="monitor-env" class="form-control">
+              <option value="production">Production</option>
+              <option value="staging">Staging</option>
+              <option value="internal">Internal / Microservices</option>
+              <option value="development">Development</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="monitor-desc">Description</label>
+            <input type="text" id="monitor-desc" class="form-control" placeholder="Optional notes about service architecture...">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Monitor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. REPORT INCIDENT MODAL -->
+  <div class="modal-overlay" id="incident-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Report New Incident</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="incident-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="incident-title">Incident Title *</label>
+            <input type="text" id="incident-title" class="form-control" required placeholder="e.g. Database replication lag spike">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="incident-severity">Severity Level</label>
+            <select id="incident-severity" class="form-control">
+              <option value="critical">Critical (P1 — Service Outage)</option>
+              <option value="high" selected>High (P2 — Significant Degradation)</option>
+              <option value="medium">Medium (P3 — Partial Impairment)</option>
+              <option value="low">Low (P4 — Minor Bug)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="incident-monitor-select">Affected Service (Optional)</label>
+            <select id="incident-monitor-select" class="form-control">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="incident-desc">Incident Description & Observations</label>
+            <textarea id="incident-desc" class="form-control" rows="4" placeholder="Detail symptoms, error logs, or impact..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Dispatch Incident</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. RESOLVE INCIDENT MODAL -->
+  <div class="modal-overlay" id="resolve-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Resolve Incident & Root Cause Analysis</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="resolve-modal-form">
+        <div class="modal-body">
+          <input type="hidden" id="resolve-incident-id">
+
+          <div class="form-group">
+            <label class="form-label" for="resolve-root-cause">Root Cause *</label>
+            <textarea id="resolve-root-cause" class="form-control" rows="3" required placeholder="e.g. Memory leak in background worker pool during cache flush..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="resolve-notes">Resolution Actions Applied *</label>
+            <textarea id="resolve-notes" class="form-control" rows="3" required placeholder="e.g. Restarted consumer pods with increased heap allocation and patched leak..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-success">Mark as Resolved</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. TIMELINE UPDATE MODAL -->
+  <div class="modal-overlay" id="timeline-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Log Timeline Activity</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="timeline-modal-form">
+        <div class="modal-body">
+          <input type="hidden" id="timeline-incident-id">
+          <div class="form-group">
+            <label class="form-label" for="timeline-note-text">Activity Update Note *</label>
+            <textarea id="timeline-note-text" class="form-control" rows="4" required placeholder="e.g. Rolling back deployment v2.4.1 to v2.4.0..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Note</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. ALERT RULE MODAL -->
+  <div class="modal-overlay" id="alert-rule-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Alert Policy</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="alert-rule-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="alert-name">Policy Name *</label>
+            <input type="text" id="alert-name" class="form-control" required placeholder="e.g. Consecutive 5xx Alert">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="alert-monitor-select">Target Monitor</label>
+            <select id="alert-monitor-select" class="form-control">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="alert-condition-type">Trigger Condition</label>
+              <select id="alert-condition-type" class="form-control">
+                <option value="consecutive_failures">Consecutive Failures</option>
+                <option value="latency_threshold">Latency Exceeds (ms)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="alert-threshold-value">Threshold Value</label>
+              <input type="number" id="alert-threshold-value" class="form-control" value="3" min="1">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="alert-channel">Dispatch Channel</label>
+              <select id="alert-channel" class="form-control">
+                <option value="incident">Auto-Create Incident</option>
+                <option value="slack">Slack Webhook</option>
+                <option value="email">Email Notification</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="alert-recipient">Target Webhook / Email</label>
+              <input type="text" id="alert-recipient" class="form-control" value="alerts@apisentinel.dev">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Policy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. AUTHENTICATION MODAL -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Sentinel Access Control</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted);">
+          Select a pre-seeded account or register a custom engineer account to test role-based permissions (Admin vs Analyst vs Viewer).
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-secondary" style="justify-content:flex-start; text-align:left;" data-switch-role="admin">
+            <div>
+              <strong>Alex Vance (Admin)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Full CRUD, manage monitors, alerts, delete permissions</div>
+            </div>
+          </button>
+
+          <button class="btn btn-secondary" style="justify-content:flex-start; text-align:left;" data-switch-role="analyst">
+            <div>
+              <strong>Maya Lin (Analyst)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Create monitors, acknowledge & resolve incidents, ping endpoints</div>
+            </div>
+          </button>
+
+          <button class="btn btn-secondary" style="justify-content:flex-start; text-align:left;" data-switch-role="viewer">
+            <div>
+              <strong>David Kim (Viewer)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Read-only telemetry access, cannot modify settings</div>
+            </div>
+          </button>
+        </div>
+
+        <div style="text-align:center; padding-top:12px; border-top:1px solid var(--border-subtle);">
+          <button class="btn btn-danger btn-sm" onclick="Auth.logout()">Log Out Current Session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- SCRIPTS -->
+  <script src="/js/api.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/monitors.js"></script>
+  <script src="/js/incidents.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
