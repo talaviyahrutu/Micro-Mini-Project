@@ -1,13 +1,13 @@
 # 🛡️ API Sentinel — API Health Monitoring & Incident Management Platform
 
-[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-4.21-blue.svg)](https://expressjs.com/)
-[![Sequelize](https://img.shields.io/badge/Sequelize-ORM-52B0E7.svg)](https://sequelize.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+[![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-61DAFB.svg)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js%20%26%20Express-339933.svg)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB%20%26%20Mongoose-47A248.svg)](https://www.mongodb.com/)
+[![Docker](https://img.shields.io/badge/Containerization-Docker%20Compose-2496ED.svg)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes%20%28Minikube%29-326CE5.svg)](https://kubernetes.io/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**API Sentinel** is an enterprise-grade API health monitoring, automated telemetry tracking, and incident command platform. Designed for Site Reliability Engineers (SREs), DevOps teams, and platform developers, Sentinel performs high-frequency health probes, visualizes real-time latency sparklines, automatically detects failures, and orchestrates end-to-end incident resolution workflows.
+**API Sentinel** is a full-stack, enterprise-grade API health monitoring, automated telemetry tracking, and incident command platform. Designed for Site Reliability Engineers (SREs), DevOps teams, and platform developers, Sentinel performs high-frequency health probes, visualizes real-time latency sparklines, automatically detects failures, and orchestrates end-to-end incident resolution workflows.
 
 ---
 
@@ -15,205 +15,255 @@
 
 ```mermaid
 graph TD
-    subgraph Client ["Client Presentation Layer"]
-        UI["Cyberpunk Dark Dashboard (HTML5 / Vanilla CSS / ES6)"]
-        Sparklines["Real-time SVG Sparklines & KPI Metrics"]
-        SimSwitch["Outage Simulator Switch"]
+    subgraph Client ["Frontend Presentation Layer (React 18 + Vite)"]
+        Dashboard["Cyberpunk Glassmorphism Dashboard"]
+        FleetMgmt["API Fleet CRUD & Manual Probes"]
+        IncidentCommand["Incident Lifecycle Command & Audit Logs"]
+        TelemetrySpark["Latency Sparklines & SLO Analytics"]
+        OutageSim["Interactive Outage Simulator Switch"]
     end
 
-    subgraph Server ["API Sentinel Core Engine (Node.js & Express)"]
+    subgraph Server ["Backend Core Engine (Node.js & Express)"]
         AuthMiddleware["JWT Authentication & RBAC Middleware"]
-        Router["RESTful API Route Handlers"]
-        PingEngine["Background Health Check Ping Engine"]
-        IncidentEngine["Automated Incident Dispatcher"]
-        MockCluster["Mock Target Cluster (/api/mock/*)"]
+        SSRFShield["SSRF Security Shield (RFC1918 / Metadata Filter)"]
+        Router["RESTful API Route Handlers (/api/*)"]
+        SchedulerEngine["Automated Health Monitoring Scheduler"]
+        ProbeService["High-Precision Latency HTTP Probe Service"]
+        IncidentEngine["Automated Incident Creation Engine"]
+        MockCluster["Mock Target Microservices Cluster (/api/mock/*)"]
     end
 
-    subgraph DataLayer ["Data Persistence Layer"]
-        Sequelize["Sequelize ORM"]
-        Postgres[("PostgreSQL 16 (Docker) / SQLite Fallback")]
+    subgraph DataLayer ["Database Persistence Layer (MongoDB)"]
+        Mongoose["Mongoose ODM"]
+        UsersCol[("Users Collection")]
+        ApisCol[("APIs Collection")]
+        ChecksCol[("HealthChecks Collection (TTL Indexed)")]
+        IncidentsCol[("Incidents Collection")]
     end
 
-    UI -->|HTTP / JSON + JWT| AuthMiddleware
-    AuthMiddleware --> Router
-    Router --> Sequelize
-    PingEngine -->|Async HTTP Probes| MockCluster
-    PingEngine -->|Async HTTP Probes| ExternalAPIs["External Target APIs"]
-    PingEngine -->|Health Check Logs| Sequelize
-    PingEngine -->|Detect Consecutive Failures| IncidentEngine
-    IncidentEngine -->|Auto-Create Incident| Sequelize
-    Sequelize --> Postgres
-    SimSwitch -->|Toggle Outage| MockCluster
+    Client -->|HTTP / REST + JWT| AuthMiddleware
+    AuthMiddleware --> SSRFShield
+    SSRFShield --> Router
+    Router --> Mongoose
+    SchedulerEngine -->|Periodic Probes| ProbeService
+    ProbeService -->|HTTP Probes| MockCluster
+    ProbeService -->|HTTP/HTTPS Probes| ExternalAPIs["External Target APIs"]
+    ProbeService -->|Persist Telemetry| ChecksCol
+    ProbeService -->|Consecutive Failures| IncidentEngine
+    IncidentEngine -->|Create/Deduplicate Incident| IncidentsCol
+    Mongoose --> UsersCol
+    Mongoose --> ApisCol
+    OutageSim -->|Toggle Failure (503/500)| MockCluster
 ```
 
 ---
 
-## ✨ Key Features & Requirements Matrix
+## 📂 Project Structure
 
-| Requirement | Implementation Detail | Status |
-| :--- | :--- | :---: |
-| **Database & Relational CRUD** | Full CRUD on Monitors, Incidents, Alert Rules, HealthCheck logs, and Users using Sequelize ORM. | ✅ Complete |
-| **Search, Filter & Validation** | Search by name/URL/code; filter by health status, environment, severity; payload validation via `express-validator`. | ✅ Complete |
-| **Authentication & RBAC** | JWT tokens with `bcryptjs` hashing. Distinct permissions for **Admin** (full management), **Analyst** (operational triage), and **Viewer**. | ✅ Complete |
-| **Background Ping Engine** | Autonomous scheduler pings active endpoints, measures latency, calculates rolling uptime %, and records telemetry. | ✅ Complete |
-| **Automated Outage Detection** | Triggers an active Incident with severity rating and timeline entry upon consecutive health check failures. | ✅ Complete |
-| **Incident Management** | Full lifecycle: `Investigating` ➔ `Identified` ➔ `Monitoring` ➔ `Resolved` with root cause tracking and activity logs. | ✅ Complete |
-| **Git & Version History** | Clean repository history, descriptive semantic commits, `.gitignore`, and tagged releases (`v1.0.0`). | ✅ Complete |
-| **Docker Deployment** | Production multi-stage `Dockerfile` + `docker-compose.yml` with persistent PostgreSQL volume. | ✅ Complete |
-| **Postman Test Suite** | Ready-to-import Postman Collection & Environment with pre-request scripts, test assertions, and token auto-injection. | ✅ Complete |
-| **Live Outage Simulator** | Built-in 1-click toggle to simulate an outage on a target microservice for live exam demonstrations. | ✅ Complete |
+```
+d:/Mini Project Micro/
+├── backend/                             # Backend Service (Node.js, Express, Mongoose)
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── db.js                    # MongoDB connection with in-memory fallback
+│   │   ├── models/
+│   │   │   ├── User.js                  # User model with bcrypt hashing & roles
+│   │   │   ├── Api.js                   # API model with interval, timeout, telemetry
+│   │   │   ├── HealthCheck.js           # Health check log model with TTL index
+│   │   │   ├── Incident.js              # Incident model with timeline & lifecycle
+│   │   │   └── index.js                 # Unified models export
+│   │   ├── middleware/
+│   │   │   ├── auth.js                  # JWT verification & RBAC authorization
+│   │   │   ├── validate.js              # express-validator request schemas
+│   │   │   └── ssrfProtection.js        # Anti-SSRF DNS and RFC1918 filter
+│   │   ├── routes/
+│   │   │   ├── auth.routes.js           # Register, login, profile
+│   │   │   ├── api.routes.js            # Fleet CRUD, manual probe, history
+│   │   │   ├── incident.routes.js       # Incidents list, lifecycle update, triage
+│   │   │   ├── dashboard.routes.js      # Aggregated KPIs and telemetry summary
+│   │   │   └── mock.routes.js           # Built-in target mock services & outage toggle
+│   │   ├── services/
+│   │   │   ├── ping.service.js          # HTTP probe, latency timer, auto-incidents
+│   │   │   └── scheduler.service.js     # Background monitoring interval manager
+│   │   ├── seed/
+│   │   │   └── seeder.js                # Sample users, APIs, and telemetry seeder
+│   │   ├── app.js                       # Express app configuration & middleware
+│   │   └── server.js                    # Server startup and graceful shutdown
+│   ├── .dockerignore
+│   ├── .env.example
+│   ├── Dockerfile                       # Production Node 20-alpine container
+│   └── package.json
+│
+├── frontend/                            # Frontend Web Application (React + Vite)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx               # Brand, nav tabs, user badge, outage switch
+│   │   │   ├── StatCard.jsx             # Glowing KPI metric cards
+│   │   │   ├── ApiModal.jsx             # Add & Edit API modal with presets
+│   │   │   ├── IncidentModal.jsx        # Incident triage & timeline audit modal
+│   │   │   └── HistoryModal.jsx         # Historical sparkline graph & logs
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx          # JWT state, login, register, logout
+│   │   ├── pages/
+│   │   │   ├── DashboardPage.jsx        # Real-time KPIs, fleet status, live probe feed
+│   │   │   ├── ApisPage.jsx             # Search, filter, CRUD fleet management
+│   │   │   ├── IncidentsPage.jsx        # Filterable incident triage command
+│   │   │   ├── AnalyticsPage.jsx        # Latency benchmarking & rolling SLO uptime
+│   │   │   ├── LoginPage.jsx            # Sign in with 1-click examiner demo accounts
+│   │   │   └── RegisterPage.jsx         # User registration with RBAC selection
+│   │   ├── services/
+│   │   │   └── api.js                   # Axios client with JWT request interceptors
+│   │   ├── App.jsx                      # App root router and navigation
+│   │   ├── index.css                    # Modern Cyberpunk Dark Glassmorphism CSS
+│   │   └── main.jsx                     # React DOM root entry
+│   ├── .dockerignore
+│   ├── Dockerfile                       # Multi-stage build + Nginx Alpine runner
+│   ├── index.html                       # HTML5 shell with JetBrains Mono & Outfit fonts
+│   ├── nginx.conf                       # Nginx SPA router and API reverse proxy
+│   ├── package.json
+│   └── vite.config.js
+│
+├── k8s/                                 # Kubernetes Manifests (Minikube Deployment)
+│   ├── mongo-pvc.yaml                   # Persistent storage claim for MongoDB
+│   ├── mongo-deployment.yaml            # MongoDB pod deployment & ClusterIP service
+│   ├── backend-configmap.yaml           # ConfigMap for runtime variables
+│   ├── backend-secret.yaml              # Secret for JWT and database credentials
+│   ├── backend-deployment.yaml          # Backend deployment with liveness/readiness probes
+│   ├── frontend-deployment.yaml         # Frontend deployment & NodePort service (30080)
+│   └── deploy-minikube.ps1              # 1-click Minikube automation PowerShell script
+│
+├── docker-compose.yml                   # Turnkey multi-container Docker Compose file
+├── .env.example                         # Master environment variables template
+├── .gitignore                           # Excludes node_modules, dist, secrets, logs
+├── API_Sentinel.postman_collection.json # Automated Postman test collection
+├── API_Sentinel.postman_environment.json# Postman environment configuration
+├── package.json                         # Root project scripts runner
+└── README.md                            # Comprehensive project documentation
+```
 
 ---
 
-## 🚀 Quick Start Guide
+## ⚡ Quick Start Guide
 
-### Option 1: Docker Compose (Recommended for Evaluation)
+### Option 1: Docker Compose (Recommended for Turnkey Evaluation)
 
-Ensure Docker Desktop is running, then execute:
+Ensure Docker Desktop is running, then execute in Windows PowerShell:
 
-```bash
+```powershell
 docker compose up --build
 ```
 
-- **Web Dashboard**: [http://localhost:3000](http://localhost:3000)
-- **PostgreSQL Database**: Port `5432` (Persistent volume: `sentinel_postgres_data`)
-- **Healthcheck Probe**: `http://localhost:3000/healthz`
+- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
+- **Backend API & Health Probe:** [http://localhost:5000/healthz](http://localhost:5000/healthz)
+- **MongoDB Database:** `mongodb://localhost:27017/apisentinel` (Persistent volume: `sentinel_mongo_data`)
 
-To stop the containers:
-```bash
+To stop all services:
+```powershell
 docker compose down
 ```
 
 ---
 
-### Option 2: Local Run (Node.js & SQLite/Postgres)
+### Option 2: Local Standalone Development (Node.js & MongoDB)
 
 Prerequisites: Node.js v18+ installed.
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+#### 1. Start the Backend:
+```powershell
+cd backend
+npm install
+npm run seed       # Seeds default Admin, Analyst, and sample monitored APIs
+npm run dev        # Starts Express server on http://localhost:5000
+```
+> **Note:** If external MongoDB is not running locally, API Sentinel automatically spins up a lightweight embedded in-memory MongoDB server for testing!
 
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   *(By default, `.env` runs in SQLite mode with zero external dependencies needed!)*
+#### 2. Start the Frontend:
+In a new PowerShell terminal:
+```powershell
+cd frontend
+npm install
+npm run dev        # Starts Vite dev server on http://localhost:5173
+```
 
-3. **Seed database with test data:**
-   ```bash
-   npm run seed
-   ```
-
-4. **Start the application:**
-   ```bash
-   npm start
-   # Or for hot-reloading:
-   npm run dev
-   ```
-
-5. Open your browser at **[http://localhost:3000](http://localhost:3000)**.
+Open your browser to: **[http://localhost:5173](http://localhost:5173)**
 
 ---
 
-## 👥 Pre-Seeded User Accounts
+## 🔑 Pre-Seeded Demonstration Credentials
 
-The platform includes pre-configured accounts representing standard SRE organizational roles. You can switch between them in 1-click from the top-right header:
-
-| Role | Email | Password | Permissions |
+| Role | Email Address | Password | Permissions |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@apisentinel.dev` | `Admin@123` | Full access. Create, edit, delete monitors; manage alert policies; full incident control. |
-| **Analyst** | `analyst@apisentinel.dev` | `User@123` | Create monitors, trigger manual pings, acknowledge and resolve incidents, add timeline notes. |
-| **Viewer** | `viewer@apisentinel.dev` | `Viewer@123` | Read-only telemetry monitoring and metrics inspection. |
+| **Administrator** | `admin@sentinel.dev` | `admin123` | Full CRUD on APIs, incidents, and system settings |
+| **Analyst** | `analyst@sentinel.dev` | `analyst123` | Triage incidents, execute probes, view telemetry |
+
+> 💡 **College Evaluation Tip:** On the Login page, click the **"⚡ 1-Click Examiner Demo Logins"** buttons to instantly log in without typing!
 
 ---
 
-## 📚 REST API Reference
+## 🎮 Live Outage Demonstration (How to Wow Evaluators)
 
-### 🔐 Authentication (`/api/auth`)
-- `POST /api/auth/login` — Authenticate and receive signed JWT Bearer token
-- `POST /api/auth/register` — Register a new platform user with validation
-- `GET /api/auth/me` — Return current authenticated user profile
-- `GET /api/auth/users` — List platform engineers for incident assignment
+API Sentinel includes an **Interactive Outage Simulator**:
 
-### 📡 Monitors & Health Probes (`/api/monitors`)
-- `GET /api/monitors` — List monitors (supports `search`, `status`, `environment`, `sortBy`)
-- `GET /api/monitors/:id` — Retrieve monitor details with last 30 health checks and incidents
-- `POST /api/monitors` — Register a new monitored endpoint *(Admin / Analyst)*
-- `PUT /api/monitors/:id` — Update monitor configuration *(Admin)*
-- `DELETE /api/monitors/:id` — Delete monitor *(Admin)*
-- `POST /api/monitors/:id/ping` — Trigger immediate health check probe
-- `POST /api/monitors/ping-all` — Trigger immediate ping on all active endpoints
-
-### 🚨 Incident Command (`/api/incidents`)
-- `GET /api/incidents` — List incidents (supports `status`, `severity`, `monitorId`, `search`)
-- `GET /api/incidents/:id` — Retrieve incident details and full audit timeline
-- `POST /api/incidents` — Manually report a new incident
-- `PUT /api/incidents/:id` — Update incident details
-- `POST /api/incidents/:id/acknowledge` — Acknowledge and assign incident
-- `POST /api/incidents/:id/timeline` — Append progress update to incident timeline
-- `POST /api/incidents/:id/resolve` — Mark resolved with root cause & mitigation notes
-- `DELETE /api/incidents/:id` — Delete incident *(Admin)*
-
-### 📊 Telemetry & System (`/api/health-checks`)
-- `GET /api/health-checks` — Stream paginated health check logs
-- `GET /api/health-checks/stats` — Aggregated uptime %, average latency, and check counts
-- `GET /api/health-checks/system` — Diagnostic probe (DB dialect, memory, node version)
-
-### 🔬 Mock Targets & Simulator (`/api/mock`)
-- `GET /api/mock/healthy` — Returns fast 200 OK (simulate healthy API)
-- `GET /api/mock/slow?delay=1200` — Returns delayed 200 OK (simulate degraded latency)
-- `GET /api/mock/flaky` — Alternates between 200 OK and 500 error
-- `GET /api/mock/service-target` — Target controlled by outage toggle
-- `POST /api/mock/toggle-outage` — Toggle simulated failure state (`{ "active": true|false }`)
+1. Click the **"Simulate Outage"** button in the top navigation bar.
+2. The mock payment microservice begins responding with `503 Service Unavailable`.
+3. Within seconds, API Sentinel's automated background probe detects the failure:
+   - The API status turns **red (Unhealthy)** with a pulsing glow.
+   - An active **Critical Incident** is automatically generated.
+   - A red **Outage Alert Banner** appears on the Dashboard.
+4. Click **"Triage & Logs"** to advance the incident through its lifecycle:
+   - `Investigating` ➔ `Identified` ➔ `Monitoring` ➔ `Resolved`.
+5. Click **"Outage Active"** again to restore normal operations (`200 OK`).
 
 ---
 
-## 🧪 Postman Collection & Testing Guide
+## ☸️ Kubernetes (Minikube) Deployment
 
-A complete Postman test suite is provided in the repository root:
-- [`API_Sentinel.postman_collection.json`](file:///d:/Mini%20Project%20Micro/API_Sentinel.postman_collection.json)
-- [`API_Sentinel.postman_environment.json`](file:///d:/Mini%20Project%20Micro/API_Sentinel.postman_environment.json)
+To deploy API Sentinel on a local Kubernetes cluster using Minikube:
 
-### Importing into Postman:
-1. Open Postman ➔ Click **Import**.
-2. Select both `API_Sentinel.postman_collection.json` and `API_Sentinel.postman_environment.json`.
-3. Select the **API Sentinel Local Environment**.
-4. Run request **`🔐 Authentication ➔ 1. Login as Admin`**.
-   *The test script automatically extracts the JWT token and saves it to the `{{token}}` variable!*
-5. Execute any monitor, incident, or telemetry requests seamlessly.
+1. Open Windows PowerShell as Administrator.
+2. Run the deployment script:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File ./k8s/deploy-minikube.ps1
+   ```
+3. Once pods are ready, launch the service:
+   ```powershell
+   minikube service frontend-service
+   ```
+
+Verify deployment resources:
+```powershell
+kubectl get pods -l app=sentinel
+kubectl get services -l app=sentinel
+kubectl get pvc
+```
 
 ---
 
-## 🎬 Step-by-Step Live Demonstration Script
+## 📮 Postman API Testing Suite
 
-Follow this script during project presentation or evaluation:
+1. Open **Postman**.
+2. Click **Import** and select:
+   - `API_Sentinel.postman_collection.json`
+   - `API_Sentinel.postman_environment.json`
+3. Execute the collection in order:
+   - `0. System Health Probe` ➔ Verifies `/healthz`
+   - `1. Login as Admin` ➔ Automatically extracts and saves the JWT token into the environment
+   - `2. Fleet Management` ➔ Tests CRUD operations and manual probes
+   - `3. Dashboard & Incident Command` ➔ Verifies KPI calculations and status updates
+   - `4. Outage Simulator` ➔ Tests mock failure triggers
 
-1. **Start the Application**:
-   Run `docker compose up --build` or `npm start`.
-2. **Access Dashboard**:
-   Open `http://localhost:3000`. Point out the dark-mode aesthetic, radar pulse indicator, and real-time KPI metrics.
-3. **Demonstrate CRUD**:
-   - Click **"+ Add Monitor"** and add a new endpoint (e.g., `Notification Worker`, `http://localhost:3000/api/mock/healthy`).
-   - Click **"Ping Now"** on the card and watch the latency sparkline and 200 OK status appear immediately.
-   - Edit the endpoint or delete it.
-4. **Demonstrate Role-Based Access Control**:
-   - Use the **Role Switcher** in the top navigation to switch between **Admin** and **Viewer**.
-   - Notice that administrative actions (delete buttons, alert policies creation) are hidden/protected for read-only roles.
-5. **Demonstrate Outage Simulation & Automated Incident Response**:
-   - Navigate to the **Simulator & Diagnostics** tab.
-   - Flip the **Simulate Outage** switch to **ON**.
-   - Notice the `Order Processing Pipeline` status immediately transitions to **DOWN (503)**.
-   - Switch to the **Incident Command Center** tab: Sentinel has automatically created a new incident titled `Service Outage: Order Processing Pipeline is DOWN`!
-   - Click **Acknowledge** ➔ Click **+ Add Update** to log investigation notes ➔ Flip outage switch **OFF** ➔ Click **Mark Resolved** and record the root cause.
-6. **Verify Docker & Database Status**:
-   - Run `docker compose ps` to show healthy container status for `sentinel_app` and `sentinel_postgres`.
-   - Show the persistent storage volume `sentinel_postgres_data`.
-7. **Verify Git History**:
-   - Run `git log --oneline` to display the structured commit history.
+---
+
+## 🔒 Security & Reliability Features
+
+- **SSRF Protection:** Resolves hostnames via DNS and blocks loopback (`127.0.0.1`), RFC 1918 private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), and AWS/GCP/Azure cloud metadata endpoints (`169.254.169.254`).
+- **Overlapping Check Prevention:** Background scheduler uses an in-flight probe lock map to ensure high-frequency schedules never overwhelm target servers or crash the engine.
+- **Deduplication:** Automatic failure triggers only open one active incident per endpoint, preventing alert fatigue and database spam.
+- **TTL Indexing:** Historical probe telemetry automatically expires after 30 days to guarantee bounded database growth.
+- **Secure Password Hashing:** Salted `bcryptjs` rounds with strict JWT Bearer token expiry.
 
 ---
 
 ## 📄 License
+
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

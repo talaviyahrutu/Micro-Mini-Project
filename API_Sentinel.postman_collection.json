@@ -1,28 +1,56 @@
 {
   "info": {
-    "_postman_id": "api-sentinel-collection-v1",
-    "name": "API Sentinel — Health & Incident Management",
-    "description": "Comprehensive Postman test collection for API Sentinel with automated tests and token saving.",
+    "_postman_id": "api-sentinel-mongo-v2",
+    "name": "API Sentinel — REST API Test Suite",
+    "description": "Comprehensive Postman test collection for the MongoDB-backed API Sentinel Platform with pre-request scripts, automated token extraction, and response validations.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "🔐 Authentication",
+      "name": "0. System Health Probe",
       "item": [
         {
-          "name": "1. Login as Admin",
+          "name": "Liveness & DB Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+          },
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "if (jsonData.data && jsonData.data.token) {",
-                  "    pm.environment.set(\"token\", jsonData.data.token);",
-                  "    pm.collectionVariables.set(\"token\", jsonData.data.token);",
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Database is connected', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('UP');",
+                  "    pm.expect(json.database).to.eql('connected');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login as Admin (Extracts Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Contains JWT token', function () { pm.expect(json.token).to.be.a('string'); });",
+                  "if (json.token) {",
+                  "    pm.environment.set('token', json.token);",
+                  "    pm.collectionVariables.set('token', json.token);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -34,79 +62,73 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@apisentinel.dev\",\n  \"password\": \"Admin@123\"\n}"
+              "raw": "{\n  \"email\": \"admin@sentinel.dev\",\n  \"password\": \"admin123\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
           }
         },
         {
-          "name": "2. Login as Analyst",
+          "name": "Login as Analyst",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"analyst@apisentinel.dev\",\n  \"password\": \"User@123\"\n}"
+              "raw": "{\n  \"email\": \"analyst@sentinel.dev\",\n  \"password\": \"analyst123\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
           }
         },
         {
-          "name": "3. Register Custom User",
+          "name": "Register New User",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Sarah Connor\",\n  \"email\": \"sarah@cyberdyne.dev\",\n  \"password\": \"Security@123\",\n  \"role\": \"analyst\",\n  \"department\": \"Incident Command\"\n}"
+              "raw": "{\n  \"name\": \"DevOps Engineer\",\n  \"email\": \"devops@sentinel.dev\",\n  \"password\": \"devops123\",\n  \"role\": \"admin\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
           }
         },
         {
-          "name": "4. Get Current User Profile (Me)",
+          "name": "Get Current User Profile (Protected)",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
           }
-        },
-        {
-          "name": "5. List Engineers / Users",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/users", "host": ["{{baseUrl}}"], "path": ["api", "auth", "users"] }
-          }
         }
       ]
     },
     {
-      "name": "📡 Monitors (CRUD & Pings)",
+      "name": "2. API Fleet Management (CRUD)",
       "item": [
         {
-          "name": "1. List Monitors (with Search & Filter)",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/monitors?environment=production",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "monitors"],
-              "query": [{ "key": "environment", "value": "production" }]
+          "name": "List All Registered APIs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Returned API array', function () { pm.expect(json.data).to.be.an('array'); });",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.environment.set('apiId', json.data[0]._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        },
-        {
-          "name": "2. Get Single Monitor with Telemetry",
+          ],
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/monitors/1", "host": ["{{baseUrl}}"], "path": ["api", "monitors", "1"] }
+            "url": { "raw": "{{baseUrl}}/api/apis?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "apis"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
           }
         },
         {
-          "name": "3. Create New Monitor",
+          "name": "Register New Target API",
           "request": {
             "method": "POST",
             "header": [
@@ -115,29 +137,85 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Notification SMS Microservice\",\n  \"url\": \"{{baseUrl}}/api/mock/healthy\",\n  \"method\": \"GET\",\n  \"expectedStatusCode\": 200,\n  \"intervalSeconds\": 30,\n  \"timeoutMs\": 4000,\n  \"environment\": \"production\",\n  \"description\": \"Twilio redundant dispatch gateway\"\n}"
+              "raw": "{\n  \"name\": \"Cloudflare 1.1.1.1 Probe\",\n  \"url\": \"https://1.1.1.1\",\n  \"method\": \"GET\",\n  \"expectedStatusCode\": 200,\n  \"interval\": 30,\n  \"timeout\": 4000,\n  \"enabled\": true\n}"
             },
-            "url": { "raw": "{{baseUrl}}/api/monitors", "host": ["{{baseUrl}}"], "path": ["api", "monitors"] }
+            "url": { "raw": "{{baseUrl}}/api/apis", "host": ["{{baseUrl}}"], "path": ["api", "apis"] }
           }
         },
         {
-          "name": "4. Trigger Manual Health Ping on Monitor",
+          "name": "Get API Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/apis/{{apiId}}", "host": ["{{baseUrl}}"], "path": ["api", "apis", "{{apiId}}"] }
+          }
+        },
+        {
+          "name": "Trigger Manual Health Check Now",
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/monitors/1/ping", "host": ["{{baseUrl}}"], "path": ["api", "monitors", "1", "ping"] }
+            "url": { "raw": "{{baseUrl}}/api/apis/{{apiId}}/check", "host": ["{{baseUrl}}"], "path": ["api", "apis", "{{apiId}}", "check"] }
           }
         },
         {
-          "name": "5. Trigger Health Ping on All Active Monitors",
+          "name": "Get API Health History & Sparkline",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/monitors/ping-all", "host": ["{{baseUrl}}"], "path": ["api", "monitors", "ping-all"] }
+            "url": { "raw": "{{baseUrl}}/api/apis/{{apiId}}/history?limit=20", "host": ["{{baseUrl}}"], "path": ["api", "apis", "{{apiId}}", "history"], "query": [{ "key": "limit", "value": "20" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Dashboard & Incident Command",
+      "item": [
+        {
+          "name": "Get Dashboard Summary KPIs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Has summary metrics', function () { pm.expect(json.data.summary.totalApis).to.be.a('number'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/stats", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "stats"] }
           }
         },
         {
-          "name": "6. Update Monitor Configuration",
+          "name": "List All Incidents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.environment.set('incidentId', json.data[0]._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/incidents?status=all", "host": ["{{baseUrl}}"], "path": ["api", "incidents"], "query": [{ "key": "status", "value": "all" }] }
+          }
+        },
+        {
+          "name": "Update Incident Lifecycle Status",
           "request": {
             "method": "PUT",
             "header": [
@@ -146,151 +224,32 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Core Payment Gateway (Updated)\",\n  \"url\": \"{{baseUrl}}/api/mock/healthy\",\n  \"intervalSeconds\": 20,\n  \"timeoutMs\": 3500\n}"
+              "raw": "{\n  \"status\": \"investigating\",\n  \"note\": \"Triaging automated alert and checking downstream database connectivity.\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/api/monitors/1", "host": ["{{baseUrl}}"], "path": ["api", "monitors", "1"] }
+            "url": { "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "incidents", "{{incidentId}}", "status"] }
           }
         }
       ]
     },
     {
-      "name": "🚨 Incident Management",
+      "name": "4. Outage Simulator & Mock Targets",
       "item": [
         {
-          "name": "1. List Incidents",
+          "name": "Probe Payment Mock (Normal 200)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/incidents", "host": ["{{baseUrl}}"], "path": ["api", "incidents"] }
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/mock/payment-gateway", "host": ["{{baseUrl}}"], "path": ["api", "mock", "payment-gateway"] }
           }
         },
         {
-          "name": "2. Report Manual Incident",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Payment Gateway Elevated 502 Rate\",\n  \"description\": \"Upstream banking API returned intermittent 502 Bad Gateway during settlement.\",\n  \"severity\": \"high\",\n  \"monitorId\": 1\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/api/incidents", "host": ["{{baseUrl}}"], "path": ["api", "incidents"] }
-          }
-        },
-        {
-          "name": "3. Acknowledge Incident",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/incidents/1/acknowledge", "host": ["{{baseUrl}}"], "path": ["api", "incidents", "1", "acknowledge"] }
-          }
-        },
-        {
-          "name": "4. Add Incident Timeline Note",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"note\": \"Engaged third-party payment partner on-call lead. Investigation ongoing.\",\n  \"action\": \"PARTNER_CONTACTED\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/api/incidents/1/timeline", "host": ["{{baseUrl}}"], "path": ["api", "incidents", "1", "timeline"] }
-          }
-        },
-        {
-          "name": "5. Resolve Incident",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rootCause\": \"DNS propagation delay after cloud region switchover.\",\n  \"resolutionNotes\": \"Flushed regional DNS caches and restored primary routing table.\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/api/incidents/1/resolve", "host": ["{{baseUrl}}"], "path": ["api", "incidents", "1", "resolve"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "📊 Telemetry & System Diagnostics",
-      "item": [
-        {
-          "name": "1. Telemetry Log Stream",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/health-checks?limit=30", "host": ["{{baseUrl}}"], "path": ["api", "health-checks"] }
-          }
-        },
-        {
-          "name": "2. Aggregated Latency & Uptime Stats",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/health-checks/stats", "host": ["{{baseUrl}}"], "path": ["api", "health-checks", "stats"] }
-          }
-        },
-        {
-          "name": "3. Platform Health & Diagnostics Probe",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/health-checks/system", "host": ["{{baseUrl}}"], "path": ["api", "health-checks", "system"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🔬 Outage Simulator & Mock Targets",
-      "item": [
-        {
-          "name": "1. Mock Healthy Target (200 OK)",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/mock/healthy", "host": ["{{baseUrl}}"], "path": ["api", "mock", "healthy"] }
-          }
-        },
-        {
-          "name": "2. Mock Slow Target (Degraded)",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/mock/slow?delay=1200", "host": ["{{baseUrl}}"], "path": ["api", "mock", "slow"] }
-          }
-        },
-        {
-          "name": "3. Dynamic Outage Service Target",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/mock/service-target", "host": ["{{baseUrl}}"], "path": ["api", "mock", "service-target"] }
-          }
-        },
-        {
-          "name": "4. Toggle Outage Active (Trigger Failure)",
+          "name": "Toggle Simulated Outage (Simulates 503)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"active\": true\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/api/mock/toggle-outage", "host": ["{{baseUrl}}"], "path": ["api", "mock", "toggle-outage"] }
-          }
-        },
-        {
-          "name": "5. Toggle Outage Resolved (Restore Health)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"active\": false\n}"
+              "raw": "{\n  \"service\": \"payment\",\n  \"down\": true\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/mock/toggle-outage", "host": ["{{baseUrl}}"], "path": ["api", "mock", "toggle-outage"] }
           }
@@ -299,7 +258,9 @@
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" },
-    { "key": "token", "value": "" }
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "apiId", "value": "", "type": "string" },
+    { "key": "incidentId", "value": "", "type": "string" }
   ]
 }

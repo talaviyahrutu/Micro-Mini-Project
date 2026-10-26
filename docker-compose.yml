@@ -1,55 +1,48 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database Service with Persistent Storage
-  db:
-    image: postgres:16-alpine
-    container_name: sentinel_postgres
+  # MongoDB Database Service with Persistent Named Volume
+  mongo:
+    image: mongo:7-jammy
+    container_name: sentinel_mongo
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: apisentinel
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel_secret
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - sentinel_mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sentinel -d apisentinel"]
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh --quiet"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     networks:
       - sentinel_net
 
-  # API Sentinel Application Service
-  app:
+  # Backend API Service (Node.js & Express)
+  backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: sentinel_app
+    container_name: sentinel_backend
     restart: unless-stopped
     depends_on:
-      db:
+      mongo:
         condition: service_healthy
     environment:
+      PORT: 5000
       NODE_ENV: production
-      PORT: 3000
-      DB_DIALECT: postgres
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: apisentinel
-      DB_USER: sentinel
-      DB_PASSWORD: sentinel_secret
-      JWT_SECRET: sentinel_production_docker_jwt_key_9876543210
+      MONGODB_URI: mongodb://mongo:27017/apisentinel
+      JWT_SECRET: ${JWT_SECRET:-sentinel_production_docker_jwt_key_9876543210_api}
       JWT_EXPIRES_IN: 7d
       AUTO_PING_ENABLED: "true"
-      PING_INTERVAL_MS: 30000
+      PING_DEFAULT_INTERVAL_SEC: 30
+      SSRF_ALLOW_PRIVATE_IPS: "true"
+      CORS_ORIGIN: http://localhost:3000,http://frontend:80
     ports:
-      - "3000:3000"
+      - "5000:5000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
       interval: 20s
       timeout: 5s
       retries: 3
@@ -57,9 +50,23 @@ services:
     networks:
       - sentinel_net
 
+  # Frontend Web UI (React + Vite served via Nginx Reverse Proxy)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinel_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - sentinel_net
+
 volumes:
-  postgres_data:
-    name: sentinel_postgres_data
+  sentinel_mongo_data:
+    name: sentinel_mongo_data
     driver: local
 
 networks:
